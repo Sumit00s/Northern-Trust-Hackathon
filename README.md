@@ -1,114 +1,156 @@
-# 🛡️ IMS — Event-Driven Incident Management System
+# IMS - Event-Driven Incident Management System
 
-A production-grade incident management platform for DevOps environments. Automatically detects, classifies, routes, and tracks incidents from detection through resolution with email notifications and a live dashboard.
+IMS is an incident management system for DevOps environments. It ingests alerts, classifies incidents, tracks lifecycle state changes, and notifies the right team members.
 
-## 🏗️ Architecture
+## Hackathon Problem Statement
+
+This project was built for the Northern Trust hackathon challenge to create an Event-Driven Incident Management System from scratch.
+
+The required goal is to:
+
+- Ingest simulated alerts from monitoring/log/metric sources
+- Classify incidents and route them into resolution workflows
+- Manage lifecycle stages from detection to post-mortem
+- Notify responders and stakeholders through communication channels
+- Provide manual controls to acknowledge, escalate, and resolve incidents
+- Show incident status and ownership in a real-time dashboard
+
+This implementation prioritizes infrastructure incidents over application incidents and demonstrates different handling paths based on severity and type.
+
+## Requirement Coverage
+
+| Challenge Requirement | Status | Implementation in IMS |
+|-----------------------|--------|------------------------|
+| Alert ingestion from simulated sources | Implemented | `simulate_alerts.py` sends events to `POST /api/alerts` |
+| Event classification and routing | Implemented | Backend classifier maps alerts by type/severity into workflows |
+| Incident workflow engine | Implemented | Lifecycle transitions: DETECTED -> ACKNOWLEDGED -> INVESTIGATING -> RESOLVED -> CLOSED |
+| Notifications to responders/stakeholders | Implemented | Email notifications and escalation reminders |
+| Manual intervention controls | Implemented | Dashboard/API actions for acknowledge, investigate, resolve, close |
+| Real-time incident visibility | Implemented | Dashboard lists active incidents with severity and status |
+| Infrastructure-first response behavior | Implemented | Higher-severity infrastructure incidents are prioritized and escalated sooner |
+| SLA or analytics insights (optional) | Partially implemented | Analytics endpoint available (`/api/analytics`) |
+| Multi-channel notifications (Slack/SMS) | Not in current scope | Email channel implemented; architecture can be extended |
+
+## Demo Scope for Judges
+
+The demo should walk through two scenarios end-to-end:
+
+1. Infrastructure incident (high severity): immediate notification, workflow progression, and escalation behavior.
+2. Application incident (lower severity): lower-priority routing and standard resolution path.
+
+This directly aligns with the judging expectation to show clear priority differences and routing logic.
+
+## Team
+
+- Rutuja Milind Jain
+- Sumit Tatyabhau Sonawane
+- Aryan Sunil Moon
+- Abhay G K
+- SADHANA R A
+- Chinmay Umesh
+- MAHESH M G
+
+## Overview
+
+The platform includes:
+
+- Alert ingestion via API
+- Incident classification and workflow management
+- Escalation and reminder automation
+- Email notifications
+- Live dashboard for monitoring and actions
+
+## High-Level Architecture
 
 ```
 simulate_alerts.py
-      │
-      ▼ POST /api/alerts
-┌─────────────────────────────────────────┐
-│           FastAPI Backend               │
-│                                         │
-│  ┌──────────┐   ┌────────────────────┐  │
-│  │Classifier│──▶│  State Machine     │  │
-│  └──────────┘   │  DETECTED          │  │
-│                 │  ACKNOWLEDGED      │  │
-│  ┌──────────┐   │  INVESTIGATING     │  │
-│  │Escalation│   │  RESOLVED          │  │
-│  │  Loop    │   │  CLOSED            │  │
-│  └──────────┘   └────────────────────┘  │
-│                        │                │
-│              ┌─────────┴─────────┐      │
-│        PostgreSQL    MongoDB   Redis     │
-│        (incidents)  (signals) (cache)   │
-└─────────────────────────────────────────┘
-      │
-      ▼
-  React Dashboard (http://localhost:3001)
+      |
+      v POST /api/alerts
++-----------------------------------------+
+|               FastAPI Backend           |
+|                                         |
+|  Classifier -> State Machine            |
+|               (DETECTED, ACKNOWLEDGED,  |
+|                INVESTIGATING, RESOLVED, |
+|                CLOSED)                  |
+|                                         |
+|  Escalation Worker                      |
+|                                         |
+|  PostgreSQL   MongoDB   Redis           |
+|  (incidents)  (signals) (cache)         |
++-----------------------------------------+
+      |
+      v
+React Dashboard (http://localhost:3001)
 ```
 
-## 🚀 Quick Start
+## Prerequisites
 
-### Prerequisites
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) running
+- Docker Desktop
+- Python 3.10+ (for local alert simulation)
 
-### 1. Clone and configure
-```bash
-# Edit .env to add your Gmail credentials (see Email Setup below)
-```
+## Quick Start
 
-### 2. Reset and start (first time or after schema changes)
+1. Configure environment variables in `.env`.
+2. Start the stack:
 
 ```bash
-# IMPORTANT: Always use -v to reset the database on first run or schema updates
 docker-compose down -v
 docker-compose up --build
 ```
 
-### 3. Open the dashboard
+3. Open the dashboard at `http://localhost:3001`.
+4. In a new terminal, run the simulator:
 
-Visit: **http://localhost:3001**
-
-### 4. Run the alert simulator
-
-Open a new terminal:
 ```bash
 python simulate_alerts.py
 ```
 
-Or with custom settings:
+Optional:
+
 ```bash
 python simulate_alerts.py --url http://localhost:8000 --delay 3
 ```
 
----
+## Email Configuration (Gmail SMTP)
 
-## 📧 Gmail SMTP Setup (for real emails)
+1. Enable 2FA for your Google account.
+2. Generate an app password from Google Account settings.
+3. Set these values in `.env`:
 
-1. **Enable 2-Factor Authentication** on your Google account:
-   https://myaccount.google.com/security
+```env
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-16-char-app-password
+ONCALL_EMAIL=oncall-recipient@gmail.com
+APP_TEAM_EMAIL=app-team-recipient@gmail.com
+SENIOR_EMAIL=senior-recipient@gmail.com
+```
 
-2. **Generate an App Password**:
-   https://myaccount.google.com/apppasswords
-   - Select "Mail" → "Other (custom name)" → "IMS"
-   - Copy the 16-character password
+4. Restart backend service after updating credentials:
 
-3. **Edit `.env`**:
-   ```env
-   SMTP_USER=your-actual-gmail@gmail.com
-   SMTP_PASSWORD=abcd efgh ijkl mnop    # 16-char app password
-   ONCALL_EMAIL=your-actual-gmail@gmail.com  # Your inbox for demo
-   APP_TEAM_EMAIL=your-actual-gmail@gmail.com
-   SENIOR_EMAIL=your-actual-gmail@gmail.com
-   ```
+```bash
+docker-compose restart backend
+```
 
-4. **Restart the backend**:
-   ```bash
-   docker-compose restart backend
-   ```
+## Typical Demo Flow
 
----
+1. Start the simulator.
+2. Observe new incidents in the dashboard.
+3. Move incidents through lifecycle actions:
+   DETECTED -> ACKNOWLEDGED -> INVESTIGATING -> RESOLVED -> CLOSED.
+4. Verify escalation/reminder behavior based on timeout rules.
 
-## 🎬 Demo Flow
-
-1. **Start simulator** → Alerts arrive, dashboard shows new incidents
-2. **P1 infrastructure incident** appears at top in red (DETECTED)
-3. **Email arrives** in oncall inbox
-4. **Click Acknowledge** → Status changes to ACKNOWLEDGED
-5. **Click Investigate** → Status changes to INVESTIGATING
-6. **Wait 5 min** → Auto-escalation email fires to senior engineer
-7. **Click Resolve** → Enter resolution note → Status becomes RESOLVED
-8. **Click Close** → Incident archived as CLOSED
-
----
-
-## 📡 API Reference
+## API Reference
 
 ### Alert Ingestion
-```
+
+```http
 POST /api/alerts
+```
+
+Example payload:
+
+```json
 {
   "type": "infrastructure",
   "severity": "P1",
@@ -118,91 +160,80 @@ POST /api/alerts
 }
 ```
 
-### Incident Management
+### Incident APIs
+
+```http
+GET    /api/incidents
+GET    /api/incidents/{id}
+PATCH  /api/incidents/{id}/acknowledge
+PATCH  /api/incidents/{id}/investigate
+PATCH  /api/incidents/{id}/resolve
+PATCH  /api/incidents/{id}/close
+GET    /api/analytics
+GET    /api/health
 ```
-GET    /api/incidents                    # List all incidents
-GET    /api/incidents/{id}               # Full detail + timeline + emails
-PATCH  /api/incidents/{id}/acknowledge   # → ACKNOWLEDGED
-PATCH  /api/incidents/{id}/investigate   # → INVESTIGATING
-PATCH  /api/incidents/{id}/resolve       # → RESOLVED (needs resolution_note)
-PATCH  /api/incidents/{id}/close         # → CLOSED
-GET    /api/analytics                    # Stats, MTTR, service frequency
-GET    /api/health                       # System health check
-```
 
-### Interactive API Docs
-Visit: **http://localhost:8000/docs**
+Interactive docs: `http://localhost:8000/docs`
 
----
+## Severity and Routing
 
-## 🚦 Incident Severity & Routing
+| Severity | Type           | Primary Notification Target |
+|----------|----------------|-----------------------------|
+| P1       | Infrastructure | On-call engineer            |
+| P2       | Infrastructure | On-call engineer            |
+| P3       | Application    | Application team            |
+| P4       | Application    | Application team            |
 
-| Severity | Type           | Who gets notified      | Action |
-|----------|----------------|------------------------|--------|
-| P1       | Infrastructure | oncall@company.com     | Page immediately |
-| P2       | Infrastructure | oncall@company.com     | Page urgently |
-| P3       | Application    | appteam@company.com    | Email, standard |
-| P4       | Application    | appteam@company.com    | Email, low priority |
+## Escalation Rules
 
----
+| Condition                               | Timeout  | Action                |
+|-----------------------------------------|----------|-----------------------|
+| P1/P2 infrastructure in DETECTED        | 5 min    | Notify senior engineer |
+| Any incident in INVESTIGATING           | 30 min   | Send reminder email    |
 
-## ⚡ Auto-Escalation Rules
+Configurable in `.env`:
 
-| Condition | Timeout | Action |
-|-----------|---------|--------|
-| P1/P2 Infrastructure in DETECTED | 5 minutes | Email senior-engineer@company.com |
-| Any incident in INVESTIGATING | 30 minutes | Send reminder email |
-
-Adjust in `.env`:
 ```env
 ESCALATION_TIMEOUT_MINUTES=5
 REMINDER_TIMEOUT_MINUTES=30
 ```
 
----
+## Data Model
 
-## 🗃️ Database Schema
+| Table          | Purpose                                |
+|----------------|----------------------------------------|
+| work_items     | Incident records in PostgreSQL         |
+| notifications  | Outbound email log                     |
+| audit_log      | Incident state transition history      |
+| rca_records    | Post-incident RCA data                 |
+| signal_metrics | Time-series metrics (TimescaleDB)      |
+| signals        | Raw signal documents (MongoDB)         |
 
-| Table | Purpose |
-|-------|---------|
-| `work_items` | All incidents (PostgreSQL) |
-| `notifications` | Email log per incident |
-| `audit_log` | Every state change with timestamp |
-| `rca_records` | Post-mortem analysis |
-| `signal_metrics` | Time-series (TimescaleDB) |
-| `signals` | Raw signal store (MongoDB) |
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-IMS/
-├── simulate_alerts.py        # Alert simulator script
-├── .env                      # Configuration
-├── docker-compose.yml
-├── backend/
-│   ├── main.py               # FastAPI app + background tasks
-│   ├── config.py             # Settings
-│   ├── api/
-│   │   └── routers.py        # All API endpoints
-│   ├── models/
-│   │   └── schemas.py        # Pydantic models
-│   ├── services/
-│   │   ├── classifier.py     # Alert → incident classification
-│   │   ├── email.py          # Gmail SMTP notifications
-│   │   ├── escalation.py     # Auto-escalation background job
-│   │   ├── ingestion.py      # Signal ingestion (legacy)
-│   │   └── workflow.py       # State machine
-│   └── db/
-│       ├── database.py       # DB connections
-│       └── init.sql          # Schema
-└── frontend/
-    └── src/
-        ├── App.tsx
-        ├── api.ts            # API client
-        └── components/
-            ├── Dashboard.tsx       # Main dashboard
-            ├── IncidentDetail.tsx  # Incident detail + timeline
-            └── ResolveModal.tsx    # Resolution note modal
+.
+|-- simulate_alerts.py
+|-- docker-compose.yml
+|-- backend
+|   |-- main.py
+|   |-- config.py
+|   |-- api/routers.py
+|   |-- db/database.py
+|   |-- db/init.sql
+|   |-- models/schemas.py
+|   `-- services/
+|       |-- classifier.py
+|       |-- email.py
+|       |-- escalation.py
+|       |-- ingestion.py
+|       `-- workflow.py
+`-- frontend
+    `-- src
+        |-- App.tsx
+        |-- api.ts
+        `-- components/
+            |-- Dashboard.tsx
+            |-- IncidentDetail.tsx
+            `-- ResolveModal.tsx
 ```
