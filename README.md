@@ -35,7 +35,6 @@ simulate_alerts.py
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) running
 
 ### 1. Clone and configure
-
 ```bash
 # Edit .env to add your Gmail credentials (see Email Setup below)
 ```
