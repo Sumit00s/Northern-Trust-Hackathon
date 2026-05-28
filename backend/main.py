@@ -20,6 +20,29 @@ from services.escalation import run_escalation_loop
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ims.main")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize connections
+    await init_postgres()
+    await init_mongodb()
+    await init_redis()
+    logger.info("Database connections initialized.")
+
+    # Start background tasks
+    observability_task = asyncio.create_task(observability_loop())
+    escalation_task = asyncio.create_task(run_escalation_loop())
+    logger.info("Background tasks started: observability + escalation")
+
+    yield
+
+    # Cleanup
+    escalation_task.cancel()
+    observability_task.cancel()
+    await close_redis()
+    await close_mongodb()
+    await close_postgres()
+    logger.info("Database connections closed.")
+
 
 async def observability_loop():
     """Prints throughput metrics (Signals/sec) to the console every 5 seconds."""
