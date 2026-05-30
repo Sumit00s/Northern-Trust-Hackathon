@@ -2,7 +2,6 @@
 
 **Project**: Incident Management System (IMS)  
 **Status**: ✅ Complete  
-**Date**: May 4, 2026
 
 ---
 
